@@ -10,4 +10,4 @@ $config['db']['slave'] = array(
     'user' => 'root',
     'password' => 'root',
     'dbname' => 'miaosha',
-);
+);//单击,主从配置到同一台

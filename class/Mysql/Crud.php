@@ -6,7 +6,7 @@
 * @version      0.1a
 */
 namespace Mysql;
-class Crud {
+class Crud {//之后我们会继承这个类,使用里边的魔术方法 crud.php是基于Db更高层的封装
 
 	private $db;
     protected $fields;
@@ -20,21 +20,21 @@ class Crud {
                 }
             }
         }
-		$this->variables  = $data;
+		$this->variables  = $data;//构造方法中进行填充
 	}
 
-    public function setDb($db) {
+    public function setDb($db) {//设置数据库连接
         $this->db = $db;
     }
     public function getDb() {
         if (!$this->db) {
-            $this->db = \Mysql\Db::getInstance('master');
+            $this->db = \Mysql\Db::getInstance('master');//说明就是Db类的实例
         }
         return $this->db;
     }
 
 	public function __set($name,$value){
-		if(strtolower($name) === $this->pk) {
+		if(strtolower($name) === $this->pk) {//魔术方法设置用于存变量,读写方便
 			$this->variables[$this->pk] = $value;
 		}
 		else {
@@ -61,7 +61,7 @@ class Crud {
 		return null;
 	}
 
-	public function save($id = "0") {
+	public function save($id = "0") {//数据更新
 		$this->variables[$this->pk] = $id ? $id : $this->variables[$this->pk];
 
 		$fieldsvals = '';
@@ -70,10 +70,10 @@ class Crud {
 		foreach($columns as $column)
 		{
 			if($column !== $this->pk)
-			$fieldsvals .= "`{$column}` = :". $column . ",";
+			$fieldsvals .= "`{$column}` = :". $column . ",";//拼更新语句,要更新的字段,字段与内容分离
 		}
 
-		$fieldsvals = substr_replace($fieldsvals , '', -1);
+		$fieldsvals = substr_replace($fieldsvals , '', -1);//字符串的最后一个字符替换掉,即去掉,
 
 		if(count($columns) > 1 ) {
 			$sql = "UPDATE `" . $this->table .  "` SET " . $fieldsvals . " WHERE `" . $this->pk . "`= :" . $this->pk;

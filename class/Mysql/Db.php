@@ -31,11 +31,11 @@ class Db
 
     private static $instances = array();
 
-    public static function getInstance($name = 'master') {
+    public static function getInstance($name = 'master') {//可以获取master和slave,都放在一个数组$instances中
         if (isset(self::$instances[$name])) {
-            return self::$instances[$name];
+            return self::$instances[$name];//单例
         }
-        self::$instances[$name] = new \Mysql\Db($name);
+        self::$instances[$name] = new \Mysql\Db($name);//创建实例,调用构造方法
         return self::$instances[$name];
     }
 
@@ -48,7 +48,7 @@ class Db
      */
     private function __construct($name = 'master')
     {
-        $this->Connect($name);
+        $this->Connect($name);//创建连接
         $this->parameters = array();
     }
 
@@ -62,19 +62,19 @@ class Db
      */
     private function Connect($name = 'master')
     {
-        global $config;
+        global $config;//全局化配置信息
         $mtime1 = microtime();
         $this->settings = $config['db'][$name];
         $dsn = 'mysql:dbname=' . $this->settings["dbname"] . ';host=' . $this->settings["host"] . '';
         try {
             # Read settings from INI file, set UTF8
-            $this->pdo = new \PDO($dsn, $this->settings["user"], $this->settings["password"], array(\PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8;"));
+            $this->pdo = new \PDO($dsn, $this->settings["user"], $this->settings["password"], array(\PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8;"));//在PHP 5.3.6及以前版本中，并不支持在DSN中的charset定义，而应该使用PDO::MYSQL_ATTR_INIT_COMMAND设置初始SQL, 即我们常用的 set names utf8指令。
 
             # We can now log any exceptions on Fatal error.
             $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
             # Disable emulation of prepared statements, use REAL prepared statements instead.
-            $this->pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
+            $this->pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);//表示是否使用PHP本地模拟prepare
 
             # Connection succeeded, set the boolean to true.
             $this->bConnected = true;
@@ -84,7 +84,7 @@ class Db
             echo $this->ExceptionLog($e->getMessage());
             die();
         }
-        $mtime2 = microtime();
+        $mtime2 = microtime();//有时候数据库连接的耗时比较长,不止几毫秒
         \common\DebugLog::_mysql('connect', null, array('host' => $this->settings['host'], 'dbname' => $this->settings['dbname']), $mtime1, $mtime2, null);
     }
 
@@ -93,7 +93,7 @@ class Db
      *
      */
     public function CloseConnection()
-    {
+    {//很少用,因为执行完毕自动关闭
         # Set the PDO object to null to close the connection
         # http://www.php.net/manual/en/pdo.connections.php
         $this->pdo = null;
@@ -113,11 +113,11 @@ class Db
     {
         # Connect to database
         if (!$this->bConnected) {
-            $this->Connect();
+            $this->Connect();//没连成功会再连一次
         }
         try {
 
-            # Prepare query
+            # Prepare query  预处理 返回PDOStatement对象
             $this->sQuery = $this->pdo->prepare($query);
 
             # Add parameters to the parameter array
@@ -129,10 +129,10 @@ class Db
                 // :fieldname 字段名形式
                 $this->bindMore($parameters);
                 # Bind parameters
-                if (!empty($this->parameters)) {
+                if (!empty($this->parameters)) {//如果没有绑上就再绑一次
                     foreach ($this->parameters as $param) {
-                        $parameters = explode("\x7F", $param);
-                        $this->sQuery->bindParam($parameters[0], $parameters[1]);
+                        $parameters = explode("\x7F", $param);//16进制\x7f = 127 \为转义 我们输入不进去,所以巧妙利用之
+                        $this->sQuery->bindParam($parameters[0], $parameters[1]);//$parameters[0]带有冒号的key
                     }
                 }
                 # Execute SQL
@@ -178,7 +178,7 @@ class Db
         if (empty($this->parameters) && is_array($parray)) {
             $columns = array_keys($parray);
             foreach ($columns as $i => &$column) {
-                $this->bind($column, $parray[$column]);
+                $this->bind($column, $parray[$column]);//循环中调用单个绑定
             }
         }
     }
@@ -197,7 +197,7 @@ class Db
         $mtime1 = microtime();
         $query = trim($query);
 
-        $this->Init($query, $params);
+        $this->Init($query, $params);//初始化
 
         $rawStatement = explode(" ", $query);
 
@@ -208,7 +208,7 @@ class Db
         if ($statement === 'select' || $statement === 'show') {
             $ret = $this->sQuery->fetchAll($fetchmode);
         } elseif ($statement === 'insert' || $statement === 'update' || $statement === 'delete') {
-            $ret = $this->sQuery->rowCount();
+            $ret = $this->sQuery->rowCount();//不支持不必要的truncate等,也更安全
         }
         $mtime2 = microtime();
         \common\DebugLog::_mysql('query: ' . $query, $params, array('host' => $this->settings['host'], 'dbname' => $this->settings['dbname']), $mtime1, $mtime2, $ret);
@@ -240,7 +240,7 @@ class Db
         $column = null;
 
         foreach ($Columns as $cells) {
-            $column[] = $cells[0];
+            $column[] = $cells[0];//每个一维数组的第一列
         }
 
         $mtime2 = microtime();
@@ -261,7 +261,7 @@ class Db
     {
         $mtime1 = microtime();
         $this->Init($query, $params);
-        $ret = $this->sQuery->fetch($fetchmode);
+        $ret = $this->sQuery->fetch($fetchmode);//1行
         $mtime2 = microtime();
         \common\DebugLog::_mysql('row: ' . $query, $params, array('host' => $this->settings['host'], 'dbname' => $this->settings['dbname']), $mtime1, $mtime2, $ret);
         return $ret;
@@ -292,7 +292,7 @@ class Db
      * @return string
      */
     private function ExceptionLog($message, $sql = "")
-    {
+    {//异常处理
         $exception = 'Unhandled Exception. <br />';
         $exception .= $message;
         $exception .= "<br /> You can find the error back in the log.";
